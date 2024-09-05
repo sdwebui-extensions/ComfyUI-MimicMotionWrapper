@@ -92,12 +92,15 @@ class DownloadAndLoadMimicMotionModel:
         model_path = os.path.join(download_path, model)
         
         if not os.path.exists(model_path):
-            log.info(f"Downloading model to: {model_path}")
-            from huggingface_hub import snapshot_download
-            snapshot_download(repo_id="Kijai/MimicMotion_pruned", 
-                                allow_patterns=[f"*{model}*"],
-                                local_dir=download_path, 
-                                local_dir_use_symlinks=False)
+            if os.path.exists(folder_paths.cache_dir):
+                model_path = os.path.join(folder_paths.cache_dir, "mimicmotion", model)
+            else:
+                log.info(f"Downloading model to: {model_path}")
+                from huggingface_hub import snapshot_download
+                snapshot_download(repo_id="Kijai/MimicMotion_pruned", 
+                                    allow_patterns=[f"*{model}*"],
+                                    local_dir=download_path, 
+                                    local_dir_use_symlinks=False)
 
         log.info(f"Loading model from: {model_path}")
         pbar.update(1)
@@ -105,13 +108,16 @@ class DownloadAndLoadMimicMotionModel:
         svd_path = os.path.join(folder_paths.models_dir, "diffusers", "stable-video-diffusion-img2vid-xt-1-1")
         
         if not os.path.exists(svd_path):
-            log.info(f"Downloading SVD model to: {model_path}")
-            from huggingface_hub import snapshot_download
-            snapshot_download(repo_id="vdo/stable-video-diffusion-img2vid-xt-1-1", 
-                                allow_patterns=[f"*.json", "*fp16*"],
-                                ignore_patterns=["*unet*"],
-                                local_dir=svd_path, 
-                                local_dir_use_symlinks=False)
+            if os.path.exists(folder_paths.cache_dir):
+                svd_path = os.path.join(folder_paths.cache_dir, "diffusers", "stable-video-diffusion-img2vid-xt-1-1")
+            else:
+                log.info(f"Downloading SVD model to: {model_path}")
+                from huggingface_hub import snapshot_download
+                snapshot_download(repo_id="vdo/stable-video-diffusion-img2vid-xt-1-1", 
+                                    allow_patterns=[f"*.json", "*fp16*"],
+                                    ignore_patterns=["*unet*"],
+                                    local_dir=svd_path, 
+                                    local_dir_use_symlinks=False)
         pbar.update(1)
 
         unet_config = UNetSpatioTemporalConditionModel.load_config(os.path.join(script_directory, "configs", "unet_config.json"))
@@ -395,12 +401,16 @@ class MimicMotionGetPoses:
         model_pose=os.path.join(model_base_path, dw_pose_model)
 
         if not os.path.exists(model_det):
-            log.info(f"Downloading yolo model to: {model_base_path}")
-            from huggingface_hub import snapshot_download
-            snapshot_download(repo_id="hr16/yolox-onnx", 
-                                allow_patterns=[f"*{yolo_model}*"],
-                                local_dir=model_base_path, 
-                                local_dir_use_symlinks=False)
+            if os.path.exists(folder_paths.cache_dir):
+                model_det = "/stable-diffusion-cache/models/ckpts/hr16/yolox-onnx/yolox_l.torchscript.pt"
+                model_pose = "/stable-diffusion-cache/models/ckpts/hr16/DWPose-TorchScript-BatchSize5/dw-ll_ucoco_384_bs5.torchscript.pt"
+            else:
+                log.info(f"Downloading yolo model to: {model_base_path}")
+                from huggingface_hub import snapshot_download
+                snapshot_download(repo_id="hr16/yolox-onnx", 
+                                    allow_patterns=[f"*{yolo_model}*"],
+                                    local_dir=model_base_path, 
+                                    local_dir_use_symlinks=False)
             
         if not os.path.exists(model_pose):
             log.info(f"Downloading dwpose model to: {model_base_path}")
