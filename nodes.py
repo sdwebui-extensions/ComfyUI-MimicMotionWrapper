@@ -420,8 +420,8 @@ class MimicMotionGetPoses:
                                 local_dir=model_base_path, 
                                 local_dir_use_symlinks=False)
             
-        model_det=os.path.join(model_base_path, yolo_model)
-        model_pose=os.path.join(model_base_path, dw_pose_model) 
+        # model_det=os.path.join(model_base_path, yolo_model)
+        # model_pose=os.path.join(model_base_path, dw_pose_model) 
 
         if not hasattr(self, "det") or not hasattr(self, "pose"):
             self.det = torch.jit.load(model_det)
