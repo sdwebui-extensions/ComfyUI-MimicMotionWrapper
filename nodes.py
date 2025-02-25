@@ -7,37 +7,21 @@ import folder_paths
 import comfy.model_management as mm
 import comfy.utils
 
-try:
-    import diffusers.models.activations
-    def patch_geglu_inplace():
-        """Patch GEGLU with inplace multiplication to save GPU memory."""
-        def forward(self, hidden_states):
-            hidden_states, gate = self.proj(hidden_states).chunk(2, dim=-1)
-            return hidden_states.mul_(self.gelu(gate))
-        diffusers.models.activations.GEGLU.forward = forward
-except:
-    pass
-
-from diffusers.models import AutoencoderKLTemporalDecoder
-from diffusers.schedulers import EulerDiscreteScheduler
-from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
+# try:
+#     import diffusers.models.activations
+#     def patch_geglu_inplace():
+#         """Patch GEGLU with inplace multiplication to save GPU memory."""
+#         def forward(self, hidden_states):
+#             hidden_states, gate = self.proj(hidden_states).chunk(2, dim=-1)
+#             return hidden_states.mul_(self.gelu(gate))
+#         diffusers.models.activations.GEGLU.forward = forward
+# except:
+#     pass
 
 script_directory = os.path.dirname(os.path.abspath(__file__))
 
-from .mimicmotion.pipelines.pipeline_mimicmotion import MimicMotionPipeline, tensor2vid
-from .mimicmotion.modules.unet import UNetSpatioTemporalConditionModel
-from .mimicmotion.modules.pose_net import PoseNet
-
-from .lcm_scheduler import AnimateLCMSVDStochasticIterativeScheduler
 
 from contextlib import nullcontext
-try:
-    from accelerate import init_empty_weights
-    from accelerate.utils import set_module_tensor_to_device
-    is_accelerate_available = True
-except:
-    is_accelerate_available = False
-    pass
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -82,6 +66,12 @@ class DownloadAndLoadMimicMotionModel:
     CATEGORY = "MimicMotionWrapper"
 
     def loadmodel(self, precision, model):
+        from diffusers.models import AutoencoderKLTemporalDecoder
+        from diffusers.schedulers import EulerDiscreteScheduler
+        from transformers import CLIPImageProcessor, CLIPVisionModelWithProjection
+        from .mimicmotion.pipelines.pipeline_mimicmotion import MimicMotionPipeline
+        from .mimicmotion.modules.unet import UNetSpatioTemporalConditionModel
+        from .mimicmotion.modules.pose_net import PoseNet
         device = mm.get_torch_device()
         mm.soft_empty_cache()
         dtype = {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[precision]
@@ -122,6 +112,13 @@ class DownloadAndLoadMimicMotionModel:
 
         unet_config = UNetSpatioTemporalConditionModel.load_config(os.path.join(script_directory, "configs", "unet_config.json"))
         log.info("Loading UNET")
+        try:
+            from accelerate import init_empty_weights
+            from accelerate.utils import set_module_tensor_to_device
+            is_accelerate_available = True
+        except:
+            is_accelerate_available = False
+            pass
         with (init_empty_weights() if is_accelerate_available else nullcontext()):
             self.unet = UNetSpatioTemporalConditionModel.from_config(unet_config)
         sd = comfy.utils.load_torch_file(os.path.join(model_path))
@@ -189,6 +186,8 @@ class DiffusersScheduler:
     CATEGORY = "MimicMotionWrapper"
 
     def loadmodel(self, scheduler, sigma_min, sigma_max, align_your_steps):
+        from diffusers.schedulers import EulerDiscreteScheduler
+        from .lcm_scheduler import AnimateLCMSVDStochasticIterativeScheduler
 
         scheduler_config = {
             "beta_end": 0.012,
@@ -351,6 +350,7 @@ class MimicMotionDecode:
     CATEGORY = "MimicMotionWrapper"
 
     def process(self, mimic_pipeline, samples, decode_chunk_size):
+        from .mimicmotion.pipelines.pipeline_mimicmotion import tensor2vid
         mm.soft_empty_cache()
     
         pipeline = mimic_pipeline['pipeline']
